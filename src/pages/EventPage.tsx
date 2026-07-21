@@ -30,9 +30,10 @@ export default function EventPage() {
       supabase.from('events').select('*').eq('id', id).single(),
       supabase
         .from('questions')
-        .select('*, options(*)')
+        .select('*, options!question_id(*)')
         .eq('event_id', id)
         .order('sort_order')
+        .order('created_at')
         .order('sort_order', { referencedTable: 'options' }),
       supabase.from('picks').select('*, questions!inner(event_id)').eq('questions.event_id', id),
       supabase.from('profiles').select('*'),

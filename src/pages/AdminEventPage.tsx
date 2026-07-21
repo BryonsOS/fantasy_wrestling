@@ -37,9 +37,10 @@ export default function AdminEventPage() {
       supabase.from('events').select('*').eq('id', id).single(),
       supabase
         .from('questions')
-        .select('*, options(*)')
+        .select('*, options!question_id(*)')
         .eq('event_id', id)
         .order('sort_order')
+        .order('created_at')
         .order('sort_order', { referencedTable: 'options' }),
     ])
     setEvent(evRes.data as LeagueEvent | null)

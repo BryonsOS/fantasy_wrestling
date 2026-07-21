@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
       const eventIds = finals.map((e) => e.id)
       const { data: qData } = await supabase
         .from('questions')
-        .select('*, options(*)')
+        .select('*, options!question_id(*)')
         .in('event_id', eventIds)
       const questions = (qData as Question[]) ?? []
       const { data: pickData } = await supabase

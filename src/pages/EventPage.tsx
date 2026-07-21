@@ -94,13 +94,15 @@ export default function EventPage() {
   const revealAll = event.status === 'locked' || event.status === 'final'
   const isFinal = event.status === 'final'
   const pickedCount = questions.filter((q) => myPicks.has(q.id)).length
+  const scoredCount = questions.filter((q) => q.correct_option_id).length
 
-  const eventScores = isFinal
-    ? profiles
-        .map((pr) => ({ profile: pr, score: scoreForUser(pr.id, questions, picks) }))
-        .filter((s) => picks.some((p) => p.user_id === s.profile.id))
-        .sort((a, b) => b.score - a.score)
-    : []
+  const eventScores =
+    revealAll && scoredCount > 0
+      ? profiles
+          .map((pr) => ({ profile: pr, score: scoreForUser(pr.id, questions, picks) }))
+          .filter((s) => picks.some((p) => p.user_id === s.profile.id))
+          .sort((a, b) => b.score - a.score)
+      : []
 
   const nameOf = (uid: string) => profiles.find((p) => p.id === uid)?.display_name ?? '—'
 
@@ -143,13 +145,21 @@ export default function EventPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {isFinal && eventScores.length > 0 && (
+      {eventScores.length > 0 && (
         <section className="card score-summary">
-          <h2 className="section-title">Event Results</h2>
+          <h2 className="section-title">
+            {isFinal ? 'Event Results' : '🔴 Live Scoreboard'}
+          </h2>
+          {!isFinal && (
+            <p className="muted">
+              {scoredCount} of {questions.length} results in — scores update as the commissioner
+              enters each finish. Refresh for the latest.
+            </p>
+          )}
           <ol className="score-list">
             {eventScores.map((s, i) => (
               <li key={s.profile.id} className={s.profile.id === userId ? 'me' : ''}>
-                <span className="rank">{i + 1}</span>
+                <span className="rank">{isFinal && i === 0 ? '🏆' : i + 1}</span>
                 <span className="name">{s.profile.display_name}</span>
                 <span className="pts">{s.score} pts</span>
               </li>
@@ -177,8 +187,8 @@ export default function EventPage() {
                   const cls = [
                     'option-btn',
                     isMine ? 'selected' : '',
-                    isFinal && isCorrect ? 'correct' : '',
-                    isFinal && isMine && !isCorrect && q.correct_option_id ? 'wrong' : '',
+                    revealAll && isCorrect ? 'correct' : '',
+                    revealAll && isMine && !isCorrect && q.correct_option_id ? 'wrong' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')
@@ -190,13 +200,13 @@ export default function EventPage() {
                       onClick={() => choose(q.id, o.id)}
                     >
                       {o.label}
-                      {isFinal && isCorrect && <span className="tag-win">WINNER</span>}
+                      {revealAll && isCorrect && <span className="tag-win">WINNER</span>}
                     </button>
                   )
                 })}
               </div>
 
-              {isFinal && mine && q.correct_option_id && (
+              {revealAll && mine && q.correct_option_id && (
                 <div className={mine === q.correct_option_id ? 'result-line hit' : 'result-line miss'}>
                   {mine === q.correct_option_id ? `✔ Nailed it (+${q.points})` : '✘ Missed'}
                 </div>

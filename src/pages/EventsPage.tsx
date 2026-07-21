@@ -79,7 +79,7 @@ function EventCard({ event }: { event: LeagueEvent }) {
       <div className="event-date">{date}</div>
       <div className="event-cta">
         {event.status === 'open' && 'Make your picks →'}
-        {event.status === 'locked' && 'Picks locked — see everyone’s picks →'}
+        {event.status === 'locked' && '🔴 Live — scores & everyone’s picks →'}
         {event.status === 'final' && 'See results →'}
       </div>
     </Link>

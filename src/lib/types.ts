@@ -12,6 +12,7 @@ export interface LeagueEvent {
   promotion: string | null
   event_date: string | null
   status: EventStatus
+  is_finale: boolean
 }
 
 export type QuestionKind = 'match' | 'prop'

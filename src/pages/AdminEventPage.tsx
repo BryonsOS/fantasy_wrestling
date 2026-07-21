@@ -203,6 +203,20 @@ export default function AdminEventPage() {
               onBlur={(e) => saveEventField({ event_date: e.target.value || null })}
             />
           </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              defaultChecked={event.is_finale}
+              onChange={(e) => {
+                saveEventField({ is_finale: e.target.checked })
+                setEvent({ ...event, is_finale: e.target.checked })
+              }}
+            />
+            <span>
+              Season finale — when this event goes <strong>Final</strong>, the standings leader is
+              crowned Ultimate Champion 🏆
+            </span>
+          </label>
         </div>
       </section>
 

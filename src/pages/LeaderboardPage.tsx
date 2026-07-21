@@ -74,9 +74,23 @@ export default function LeaderboardPage() {
 
   if (loading) return <div className="page-loading">Tallying the scores…</div>
 
+  const seasonComplete = events.some((e) => e.is_finale)
+  const champion = seasonComplete && standings.length > 0 && standings[0].total > 0 ? standings[0] : null
+
   return (
     <div className="page">
       <h1 className="page-title">League Standings</h1>
+
+      {champion && (
+        <div className="champion-banner">
+          <div className="champion-belt">🏆</div>
+          <div>
+            <div className="champion-label">Ultimate Champion</div>
+            <div className="champion-name">{champion.profile.display_name}</div>
+            <div className="champion-pts">{champion.total} points across {events.length} events</div>
+          </div>
+        </div>
+      )}
 
       {events.length === 0 ? (
         <div className="empty-state">

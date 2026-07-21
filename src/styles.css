@@ -252,6 +252,25 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .standings tr.me td { background: rgba(232, 182, 76, 0.05); }
 .standings tbody tr:first-child .name-col { color: var(--gold-soft); font-weight: 700; }
 
+/* ---------- champion banner ---------- */
+.champion-banner {
+  display: flex; align-items: center; gap: 18px;
+  background: linear-gradient(135deg, rgba(232, 182, 76, 0.16), rgba(217, 38, 50, 0.1));
+  border: 1px solid var(--gold); border-radius: var(--radius);
+  padding: 18px 22px; margin-bottom: 22px;
+  box-shadow: 0 4px 30px rgba(232, 182, 76, 0.15);
+}
+.champion-belt { font-size: 44px; }
+.champion-label {
+  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--gold); font-size: 13px; font-weight: 700;
+}
+.champion-name { font-family: var(--font-display); font-size: 32px; font-weight: 800; text-transform: uppercase; line-height: 1.1; }
+.champion-pts { color: var(--text-dim); font-size: 14px; }
+
+.checkbox-row { flex-direction: row; align-items: center; gap: 10px; font-weight: 400; }
+.checkbox-row input { width: auto; }
+
 /* ---------- admin ---------- */
 .admin-section { margin-bottom: 18px; }
 .admin-form { display: flex; flex-direction: column; gap: 12px; max-width: 480px; }

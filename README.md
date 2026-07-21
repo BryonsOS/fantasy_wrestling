@@ -1,5 +1,7 @@
 # Fantasy Wrestling League
 
+**Live site:** https://zesty-biscuit-2961d4.netlify.app
+
 A private fantasy pro wrestling site. The commissioner posts the card for upcoming
 events (matches + prop bets), members pick winners before bell time, and correct
 picks earn points on the league leaderboard.

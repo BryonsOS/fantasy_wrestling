@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { formatEntry, isScored, parseDuration } from '../lib/score'
 import {
   STATUS_LABELS,
+  type EntryFormat,
   type EventStatus,
   type LeagueEvent,
   type Question,
@@ -25,6 +27,7 @@ export default function AdminEventPage() {
 
   // new question form
   const [kind, setKind] = useState<QuestionKind>('match')
+  const [entryFormat, setEntryFormat] = useState<EntryFormat>('duration')
   const [title, setTitle] = useState('')
   const [detail, setDetail] = useState('')
   const [points, setPoints] = useState(1)
@@ -55,7 +58,7 @@ export default function AdminEventPage() {
   async function setStatus(status: EventStatus) {
     if (!event) return
     if (status === 'final') {
-      const unscored = questions.filter((q) => !q.correct_option_id)
+      const unscored = questions.filter((q) => !isScored(q))
       if (unscored.length > 0 && !confirm(`${unscored.length} pick(s) have no result entered — they'll score 0 for everyone. Go final anyway?`)) {
         return
       }
@@ -86,7 +89,7 @@ export default function AdminEventPage() {
       .split('\n')
       .map((s) => s.trim())
       .filter(Boolean)
-    if (labels.length < 2) {
+    if (kind !== 'entry' && labels.length < 2) {
       setError('Enter at least two options (one per line).')
       return
     }
@@ -101,6 +104,7 @@ export default function AdminEventPage() {
         detail: detail.trim() || null,
         points,
         sort_order: questions.length,
+        entry_format: kind === 'entry' ? entryFormat : null,
       })
       .select()
       .single()
@@ -109,16 +113,36 @@ export default function AdminEventPage() {
       setBusy(false)
       return
     }
-    const { error: oErr } = await supabase
-      .from('options')
-      .insert(labels.map((label, i) => ({ question_id: q.id, label, sort_order: i })))
-    if (oErr) setError(oErr.message)
+    if (kind !== 'entry') {
+      const { error: oErr } = await supabase
+        .from('options')
+        .insert(labels.map((label, i) => ({ question_id: q.id, label, sort_order: i })))
+      if (oErr) setError(oErr.message)
+    }
     setTitle('')
     setDetail('')
     setOptionsText('')
     setPoints(kind === 'prop' ? 2 : 1)
     await load()
     setBusy(false)
+  }
+
+  async function saveEntryAnswer(qid: string, raw: string, format: EntryFormat | null) {
+    const trimmed = raw.trim()
+    let value: number | null = null
+    if (trimmed !== '') {
+      value = format === 'duration' ? parseDuration(trimmed) : Number.isFinite(Number(trimmed)) ? Number(trimmed) : null
+      if (value == null) {
+        setError(format === 'duration' ? 'Result must be a time like 6:45:30.' : 'Result must be a number.')
+        return
+      }
+    }
+    const { error } = await supabase.from('questions').update({ answer_value: value }).eq('id', qid)
+    if (error) setError(error.message)
+    else {
+      setError(null)
+      setQuestions((qs) => qs.map((q) => (q.id === qid ? { ...q, answer_value: value } : q)))
+    }
   }
 
   async function deleteQuestion(qid: string) {
@@ -227,7 +251,9 @@ export default function AdminEventPage() {
           {questions.map((q) => (
             <div key={q.id} className="admin-question">
               <div className="admin-question-head">
-                <span className={`chip chip-${q.kind}`}>{q.kind === 'match' ? 'Match' : 'Prop'}</span>
+                <span className={`chip chip-${q.kind}`}>
+                  {q.kind === 'match' ? 'Match' : q.kind === 'entry' ? 'Typed Entry' : 'Prop'}
+                </span>
                 <strong>{q.title}</strong>
                 <span className="spacer" />
                 <label className="points-input">
@@ -244,18 +270,33 @@ export default function AdminEventPage() {
                 </button>
               </div>
               {q.detail && <div className="muted">{q.detail}</div>}
-              <div className="admin-options">
-                <span className="muted">Result:</span>
-                {q.options.map((o) => (
-                  <button
-                    key={o.id}
-                    className={`option-btn sm ${q.correct_option_id === o.id ? 'correct' : ''}`}
-                    onClick={() => setCorrect(q.id, q.correct_option_id === o.id ? null : o.id)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+              {q.kind === 'entry' ? (
+                <div className="admin-options">
+                  <span className="muted">
+                    Actual result ({q.entry_format === 'duration' ? 'H:MM:SS' : 'number'}):
+                  </span>
+                  <input
+                    className="entry-answer-input"
+                    defaultValue={q.answer_value != null ? formatEntry(q, Number(q.answer_value)) : ''}
+                    placeholder={q.entry_format === 'duration' ? 'e.g. 6:45:30' : 'e.g. 42'}
+                    onBlur={(e) => saveEntryAnswer(q.id, e.target.value, q.entry_format)}
+                  />
+                  {q.answer_value != null && <span className="muted">✔ saved — clear the box to unset</span>}
+                </div>
+              ) : (
+                <div className="admin-options">
+                  <span className="muted">Result:</span>
+                  {q.options.map((o) => (
+                    <button
+                      key={o.id}
+                      className={`option-btn sm ${q.correct_option_id === o.id ? 'correct' : ''}`}
+                      onClick={() => setCorrect(q.id, q.correct_option_id === o.id ? null : o.id)}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -269,17 +310,29 @@ export default function AdminEventPage() {
             <select value={kind} onChange={(e) => setKind(e.target.value as QuestionKind)}>
               <option value="match">Match (pick the winner)</option>
               <option value="prop">Prop bet</option>
+              <option value="entry">Typed entry (closest without going over)</option>
             </select>
           </label>
+          {kind === 'entry' && (
+            <label>
+              Answer format
+              <select value={entryFormat} onChange={(e) => setEntryFormat(e.target.value as EntryFormat)}>
+                <option value="duration">Time (H:MM:SS)</option>
+                <option value="number">Number</option>
+              </select>
+            </label>
+          )}
           <label>
-            {kind === 'match' ? 'Match title' : 'Prop question'}
+            {kind === 'match' ? 'Match title' : kind === 'entry' ? 'Question' : 'Prop question'}
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={
                 kind === 'match'
                   ? 'e.g. World Heavyweight Championship'
-                  : 'e.g. Will anyone bleed in the main event?'
+                  : kind === 'entry'
+                    ? 'e.g. How long will the main event last?'
+                    : 'e.g. Will anyone bleed in the main event?'
               }
               required
             />
@@ -292,16 +345,24 @@ export default function AdminEventPage() {
               placeholder={kind === 'match' ? 'e.g. Steel Cage — Rollins (c) vs. Punk' : 'Any clarifying rules'}
             />
           </label>
-          <label>
-            Options (one per line)
-            <textarea
-              value={optionsText}
-              onChange={(e) => setOptionsText(e.target.value)}
-              rows={4}
-              placeholder={kind === 'match' ? 'Seth Rollins\nCM Punk' : 'Yes\nNo'}
-              required
-            />
-          </label>
+          {kind !== 'entry' && (
+            <label>
+              Options (one per line)
+              <textarea
+                value={optionsText}
+                onChange={(e) => setOptionsText(e.target.value)}
+                rows={4}
+                placeholder={kind === 'match' ? 'Seth Rollins\nCM Punk' : 'Yes\nNo'}
+                required
+              />
+            </label>
+          )}
+          {kind === 'entry' && (
+            <p className="muted">
+              Members type their answer. Closest without going over wins the points (ties all win;
+              if everyone goes over, no one scores).
+            </p>
+          )}
           <label>
             Points for a correct pick
             <input

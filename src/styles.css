@@ -252,6 +252,18 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .standings tr.me td { background: rgba(232, 182, 76, 0.05); }
 .standings tbody tr:first-child .name-col { color: var(--gold-soft); font-weight: 700; }
 
+/* ---------- typed entry questions ---------- */
+.question-card.entry { border-left: 3px solid #7c6cff; }
+.question-card.entry .question-kind { color: #a89cff; }
+.chip-entry { background: rgba(124, 108, 255, 0.18); color: #a89cff; }
+.entry-block { margin-top: 12px; }
+.entry-form { display: flex; gap: 8px; max-width: 340px; }
+.entry-form input { flex: 1; }
+.entry-mine { margin-top: 8px; font-size: 14px; color: var(--text-dim); }
+.entry-mine strong { color: var(--text); }
+.entry-winner strong { color: var(--gold); }
+.entry-answer-input { max-width: 140px; padding: 5px 8px; }
+
 /* ---------- champion banner ---------- */
 .champion-banner {
   display: flex; align-items: center; gap: 18px;

@@ -15,7 +15,9 @@ export interface LeagueEvent {
   is_finale: boolean
 }
 
-export type QuestionKind = 'match' | 'prop'
+export type QuestionKind = 'match' | 'prop' | 'entry'
+
+export type EntryFormat = 'duration' | 'number'
 
 export interface Option {
   id: string
@@ -33,6 +35,8 @@ export interface Question {
   points: number
   sort_order: number
   correct_option_id: string | null
+  entry_format: EntryFormat | null
+  answer_value: number | null
   options: Option[]
 }
 
@@ -40,7 +44,8 @@ export interface Pick {
   id: string
   user_id: string
   question_id: string
-  option_id: string
+  option_id: string | null
+  entry_value: number | null
 }
 
 export const STATUS_LABELS: Record<EventStatus, string> = {

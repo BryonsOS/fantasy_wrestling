@@ -20,6 +20,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               Events
             </NavLink>
             <NavLink to="/leaderboard">Standings</NavLink>
+            <NavLink to="/chat">Locker Room</NavLink>
             {profile?.is_admin && <NavLink to="/admin">Admin</NavLink>}
           </nav>
           <div className="topbar-user">

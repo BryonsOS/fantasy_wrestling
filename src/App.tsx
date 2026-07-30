@@ -5,6 +5,7 @@ import AuthPage from './pages/AuthPage'
 import EventsPage from './pages/EventsPage'
 import EventPage from './pages/EventPage'
 import LeaderboardPage from './pages/LeaderboardPage'
+import ChatPage from './pages/ChatPage'
 import AdminPage from './pages/AdminPage'
 import AdminEventPage from './pages/AdminEventPage'
 
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/" element={<EventsPage />} />
         <Route path="/events/:id" element={<EventPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/chat" element={<ChatPage />} />
         {profile?.is_admin && (
           <>
             <Route path="/admin" element={<AdminPage />} />

@@ -68,7 +68,15 @@ export default function EventPage() {
       const others = cur.filter((p) => !(p.user_id === userId && p.question_id === questionId))
       return [
         ...others,
-        { id: 'tmp-' + questionId, user_id: userId, question_id: questionId, option_id: optionId, entry_value: null },
+        {
+          id: 'tmp-' + questionId,
+          user_id: userId,
+          question_id: questionId,
+          option_id: optionId,
+          entry_value: null,
+          entry_text: null,
+          is_correct: null,
+        },
       ]
     })
     const { error } = await supabase
@@ -84,25 +92,26 @@ export default function EventPage() {
     setSaving(null)
   }
 
-  async function saveEntry(questionId: string, value: number) {
+  async function saveEntry(questionId: string, entry: { entry_value?: number; entry_text?: string }) {
     if (!event || event.status !== 'open') return
     setSaving(questionId)
     setError(null)
+    const row = {
+      user_id: userId,
+      question_id: questionId,
+      option_id: null,
+      entry_value: entry.entry_value ?? null,
+      entry_text: entry.entry_text ?? null,
+    }
     const { error } = await supabase
       .from('picks')
-      .upsert(
-        { user_id: userId, question_id: questionId, entry_value: value, option_id: null },
-        { onConflict: 'user_id,question_id' },
-      )
+      .upsert(row, { onConflict: 'user_id,question_id' })
     if (error) {
       setError('Could not save that answer — the card may have just been locked. Refresh to check.')
     } else {
       setPicks((cur) => {
         const others = cur.filter((p) => !(p.user_id === userId && p.question_id === questionId))
-        return [
-          ...others,
-          { id: 'tmp-' + questionId, user_id: userId, question_id: questionId, option_id: null, entry_value: value },
-        ]
+        return [...others, { id: 'tmp-' + questionId, is_correct: null, ...row }]
       })
     }
     setSaving(null)
@@ -223,7 +232,7 @@ export default function EventPage() {
                   picks={picks}
                   nameOf={nameOf}
                   saving={saving === q.id}
-                  onSave={(v) => saveEntry(q.id, v)}
+                  onSave={(entry) => saveEntry(q.id, entry)}
                 />
               ) : (
                 <>
@@ -311,28 +320,45 @@ function EntryQuestion({
   picks: Pick[]
   nameOf: (uid: string) => string
   saving: boolean
-  onSave: (value: number) => void
+  onSave: (entry: { entry_value?: number; entry_text?: string }) => void
 }) {
   const { session } = useAuth()
   const userId = session!.user.id
   const isDuration = q.entry_format === 'duration'
+  const isText = q.entry_format === 'text'
   const myValue = myRow?.entry_value != null ? Number(myRow.entry_value) : null
-  const [text, setText] = useState(myValue != null ? formatEntry(q, myValue) : '')
+  const myText = myRow?.entry_text ?? null
+  const [text, setText] = useState(isText ? (myText ?? '') : myValue != null ? formatEntry(q, myValue) : '')
   const [parseError, setParseError] = useState(false)
 
-  const winners = q.answer_value != null ? entryWinners(q, picks) : []
+  const scored = isText ? q.answer_text != null : q.answer_value != null
+  const winners = scored ? entryWinners(q, picks) : []
   const allEntries = picks
-    .filter((p) => p.question_id === q.id && p.entry_value != null)
-    .sort((a, b) => Number(b.entry_value) - Number(a.entry_value))
+    .filter((p) => p.question_id === q.id && (isText ? p.entry_text != null : p.entry_value != null))
+    .sort((a, b) => (isText ? 0 : Number(b.entry_value) - Number(a.entry_value)))
+
+  const haveAnswer = isText ? myText != null : myValue != null
 
   function submit() {
-    const v = isDuration ? parseDuration(text) : Number.isFinite(Number(text.trim())) && text.trim() !== '' ? Number(text.trim()) : null
+    if (isText) {
+      const v = text.trim()
+      if (!v) {
+        setParseError(true)
+        return
+      }
+      setParseError(false)
+      onSave({ entry_text: v })
+      return
+    }
+    const v = isDuration
+      ? parseDuration(text)
+      : Number.isFinite(Number(text.trim())) && text.trim() !== '' ? Number(text.trim()) : null
     if (v == null || v < 0) {
       setParseError(true)
       return
     }
     setParseError(false)
-    onSave(v)
+    onSave({ entry_value: v })
   }
 
   return (
@@ -342,41 +368,50 @@ function EntryQuestion({
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={isDuration ? 'H:MM:SS' : 'Enter a number'}
-            inputMode={isDuration ? 'numeric' : 'decimal'}
+            placeholder={isText ? 'Type your guess' : isDuration ? 'H:MM:SS' : 'Enter a number'}
+            inputMode={isText ? 'text' : isDuration ? 'numeric' : 'decimal'}
+            maxLength={isText ? 100 : undefined}
           />
           <button className="btn btn-secondary" onClick={submit} disabled={saving}>
-            {saving ? 'Saving…' : myValue != null ? 'Update' : 'Save'}
+            {saving ? 'Saving…' : haveAnswer ? 'Update' : 'Save'}
           </button>
         </div>
       )}
       {parseError && (
         <div className="alert alert-error">
-          {isDuration ? 'Enter a time like 6:45:30 (hours:minutes:seconds).' : 'Enter a valid number.'}
+          {isText
+            ? 'Type an answer first.'
+            : isDuration
+              ? 'Enter a time like 6:45:30 (hours:minutes:seconds).'
+              : 'Enter a valid number.'}
         </div>
       )}
-      {myValue != null && (
+      {haveAnswer && (
         <div className="entry-mine">
-          Your answer: <strong>{formatEntry(q, myValue)}</strong>
+          Your answer: <strong>{isText ? myText : formatEntry(q, myValue!)}</strong>
+          {revealAll && isText && myRow?.is_correct === true && ' ✔'}
         </div>
       )}
 
-      {q.answer_value != null && revealAll && (
+      {scored && revealAll && (
         <div className="result-line hit">
-          Actual: {formatEntry(q, Number(q.answer_value))}
+          Actual: {isText ? q.answer_text : formatEntry(q, Number(q.answer_value))}
           {winners.length > 0
-            ? ` — ${winners.map(nameOf).join(' & ')} win${winners.length === 1 ? 's' : ''} (+${q.points})`
-            : ' — everyone went over, no points awarded'}
+            ? ` — ${[...new Set(winners)].map(nameOf).join(' & ')} win${winners.length === 1 ? 's' : ''} (+${q.points})`
+            : isText
+              ? ' — nobody called it'
+              : ' — everyone went over, no points awarded'}
         </div>
       )}
 
       {revealAll && allEntries.length > 0 && (
-        <details className="everyones-picks" open={q.answer_value != null}>
+        <details className="everyones-picks" open={scored}>
           <summary>Everyone’s answers</summary>
           <ul>
             {allEntries.map((p) => (
               <li key={p.id} className={winners.includes(p.user_id) ? 'entry-winner' : ''}>
-                <strong>{nameOf(p.user_id)}:</strong> {formatEntry(q, Number(p.entry_value))}
+                <strong>{nameOf(p.user_id)}:</strong>{' '}
+                {isText ? p.entry_text : formatEntry(q, Number(p.entry_value))}
                 {winners.includes(p.user_id) && ' 🏆'}
                 {p.user_id === userId && ' (you)'}
               </li>

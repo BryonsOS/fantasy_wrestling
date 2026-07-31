@@ -7,6 +7,8 @@ import {
   type EntryFormat,
   type EventStatus,
   type LeagueEvent,
+  type Pick,
+  type Profile,
   type Question,
   type QuestionKind,
 } from '../lib/types'
@@ -23,6 +25,8 @@ export default function AdminEventPage() {
   const navigate = useNavigate()
   const [event, setEvent] = useState<LeagueEvent | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
+  const [picks, setPicks] = useState<Pick[]>([])
+  const [profiles, setProfiles] = useState<Profile[]>([])
   const [error, setError] = useState<string | null>(null)
 
   // new question form
@@ -36,7 +40,7 @@ export default function AdminEventPage() {
 
   async function load() {
     if (!id) return
-    const [evRes, qRes] = await Promise.all([
+    const [evRes, qRes, pickRes, profRes] = await Promise.all([
       supabase.from('events').select('*').eq('id', id).single(),
       supabase
         .from('questions')
@@ -45,9 +49,26 @@ export default function AdminEventPage() {
         .order('sort_order')
         .order('created_at')
         .order('sort_order', { referencedTable: 'options' }),
+      supabase.from('picks').select('*, questions!inner(event_id)').eq('questions.event_id', id),
+      supabase.from('profiles').select('*'),
     ])
     setEvent(evRes.data as LeagueEvent | null)
     setQuestions((qRes.data as Question[]) ?? [])
+    setPicks(((pickRes.data as (Pick & { questions: unknown })[]) ?? []).map(
+      ({ questions: _q, ...p }) => p as Pick,
+    ))
+    setProfiles((profRes.data as Profile[]) ?? [])
+  }
+
+  const nameOf = (uid: string) => profiles.find((p) => p.id === uid)?.display_name ?? '—'
+
+  async function markTextPick(pickId: string, correct: boolean | null) {
+    const current = picks.find((p) => p.id === pickId)
+    if (!current) return
+    const target = current.is_correct === correct ? null : correct
+    const { error } = await supabase.rpc('score_text_pick', { p_pick_id: pickId, p_correct: target })
+    if (error) setError(error.message)
+    else setPicks((cur) => cur.map((p) => (p.id === pickId ? { ...p, is_correct: target } : p)))
   }
 
   useEffect(() => {
@@ -129,6 +150,35 @@ export default function AdminEventPage() {
 
   async function saveEntryAnswer(qid: string, raw: string, format: EntryFormat | null) {
     const trimmed = raw.trim()
+
+    if (format === 'text') {
+      const value = trimmed || null
+      const { error } = await supabase.from('questions').update({ answer_text: value }).eq('id', qid)
+      if (error) {
+        setError(error.message)
+        return
+      }
+      setError(null)
+      setQuestions((qs) => qs.map((q) => (q.id === qid ? { ...q, answer_text: value } : q)))
+      // Pre-mark exact matches (case/space-insensitive); commissioner can toggle any of them.
+      if (value) {
+        const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+        const rows = picks.filter((p) => p.question_id === qid && p.entry_text != null)
+        for (const p of rows) {
+          const correct = norm(p.entry_text!) === norm(value)
+          await supabase.rpc('score_text_pick', { p_pick_id: p.id, p_correct: correct })
+        }
+        setPicks((cur) =>
+          cur.map((p) =>
+            p.question_id === qid && p.entry_text != null
+              ? { ...p, is_correct: norm(p.entry_text) === norm(value) }
+              : p,
+          ),
+        )
+      }
+      return
+    }
+
     let value: number | null = null
     if (trimmed !== '') {
       value = format === 'duration' ? parseDuration(trimmed) : Number.isFinite(Number(trimmed)) ? Number(trimmed) : null
@@ -271,18 +321,56 @@ export default function AdminEventPage() {
               </div>
               {q.detail && <div className="muted">{q.detail}</div>}
               {q.kind === 'entry' ? (
-                <div className="admin-options">
-                  <span className="muted">
-                    Actual result ({q.entry_format === 'duration' ? 'H:MM:SS' : 'number'}):
-                  </span>
-                  <input
-                    className="entry-answer-input"
-                    defaultValue={q.answer_value != null ? formatEntry(q, Number(q.answer_value)) : ''}
-                    placeholder={q.entry_format === 'duration' ? 'e.g. 6:45:30' : 'e.g. 42'}
-                    onBlur={(e) => saveEntryAnswer(q.id, e.target.value, q.entry_format)}
-                  />
-                  {q.answer_value != null && <span className="muted">✔ saved — clear the box to unset</span>}
-                </div>
+                <>
+                  <div className="admin-options">
+                    <span className="muted">
+                      Actual result ({q.entry_format === 'duration' ? 'H:MM:SS' : q.entry_format === 'text' ? 'text' : 'number'}):
+                    </span>
+                    <input
+                      className={q.entry_format === 'text' ? 'entry-answer-input wide' : 'entry-answer-input'}
+                      defaultValue={
+                        q.entry_format === 'text'
+                          ? q.answer_text ?? ''
+                          : q.answer_value != null ? formatEntry(q, Number(q.answer_value)) : ''
+                      }
+                      placeholder={q.entry_format === 'duration' ? 'e.g. 6:45:30' : q.entry_format === 'text' ? 'e.g. Becky Lynch' : 'e.g. 42'}
+                      onBlur={(e) => saveEntryAnswer(q.id, e.target.value, q.entry_format)}
+                    />
+                    {isScored(q) && <span className="muted">✔ saved — clear the box to unset</span>}
+                  </div>
+                  {q.entry_format === 'text' && (
+                    <div className="admin-text-answers">
+                      {picks.filter((p) => p.question_id === q.id && p.entry_text != null).length === 0 ? (
+                        <span className="muted">No member answers yet.</span>
+                      ) : (
+                        <>
+                          <span className="muted">Member answers — tap ✓ for anyone who deserves the point:</span>
+                          <ul>
+                            {picks
+                              .filter((p) => p.question_id === q.id && p.entry_text != null)
+                              .map((p) => (
+                                <li key={p.id}>
+                                  <strong>{nameOf(p.user_id)}:</strong> {p.entry_text}
+                                  <button
+                                    className={`option-btn sm ${p.is_correct === true ? 'correct' : ''}`}
+                                    onClick={() => markTextPick(p.id, true)}
+                                  >
+                                    ✓
+                                  </button>
+                                  <button
+                                    className={`option-btn sm ${p.is_correct === false ? 'wrong' : ''}`}
+                                    onClick={() => markTextPick(p.id, false)}
+                                  >
+                                    ✗
+                                  </button>
+                                </li>
+                              ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="admin-options">
                   <span className="muted">Result:</span>
@@ -317,8 +405,9 @@ export default function AdminEventPage() {
             <label>
               Answer format
               <select value={entryFormat} onChange={(e) => setEntryFormat(e.target.value as EntryFormat)}>
-                <option value="duration">Time (H:MM:SS)</option>
-                <option value="number">Number</option>
+                <option value="duration">Time (H:MM:SS) — closest without going over</option>
+                <option value="number">Number — closest without going over</option>
+                <option value="text">Text fill-in — admin marks who's right</option>
               </select>
             </label>
           )}

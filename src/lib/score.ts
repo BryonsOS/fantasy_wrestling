@@ -1,11 +1,15 @@
 import type { Pick, Question } from './types'
 
 /**
- * Winners of a typed-entry question, Price Is Right rules:
- * closest to the actual value WITHOUT going over. Ties all win.
- * Nobody under the actual value -> nobody wins.
+ * Winners of a typed-entry question.
+ * - text: whoever the admin marked correct.
+ * - number/duration: Price Is Right rules — closest to the actual value
+ *   WITHOUT going over. Ties all win. Nobody under -> nobody wins.
  */
 export function entryWinners(q: Question, picks: Pick[]): string[] {
+  if (q.entry_format === 'text') {
+    return picks.filter((p) => p.question_id === q.id && p.is_correct === true).map((p) => p.user_id)
+  }
   if (q.answer_value == null) return []
   const answer = Number(q.answer_value)
   const valid = picks.filter(
@@ -18,7 +22,8 @@ export function entryWinners(q: Question, picks: Pick[]): string[] {
 
 /** Whether a question has its result entered. */
 export function isScored(q: Question): boolean {
-  return q.kind === 'entry' ? q.answer_value != null : q.correct_option_id != null
+  if (q.kind !== 'entry') return q.correct_option_id != null
+  return q.entry_format === 'text' ? q.answer_text != null : q.answer_value != null
 }
 
 /** Points a user earned across a set of questions. */

@@ -11,11 +11,17 @@ interface Standing {
   perEvent: Map<string, number>
 }
 
+interface MemberDetail {
+  user_id: string
+  real_name: string | null
+}
+
 export default function LeaderboardPage() {
   const { session } = useAuth()
   const userId = session!.user.id
   const [events, setEvents] = useState<LeagueEvent[]>([])
   const [standings, setStandings] = useState<Standing[]>([])
+  const [names, setNames] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,6 +34,15 @@ export default function LeaderboardPage() {
       const finals = (evData as LeagueEvent[]) ?? []
       const { data: profData } = await supabase.from('profiles').select('*').order('display_name')
       const profiles = (profData as Profile[]) ?? []
+      const { data: nameData } = await supabase.from('member_details').select('user_id, real_name')
+      setNames(
+        new Map(
+          (((nameData as MemberDetail[]) ?? []).filter((d) => d.real_name)).map((d) => [
+            d.user_id,
+            d.real_name as string,
+          ]),
+        ),
+      )
 
       if (finals.length === 0) {
         setEvents([])
@@ -122,7 +137,12 @@ export default function LeaderboardPage() {
                   <td className="rank-col">
                     {i === 0 && s.total > 0 ? '🏆' : i + 1}
                   </td>
-                  <td className="name-col">{s.profile.display_name}</td>
+                  <td className="name-col">
+                    <div className="team-name">{s.profile.display_name}</div>
+                    {names.has(s.profile.id) && (
+                      <div className="member-real-name">{names.get(s.profile.id)}</div>
+                    )}
+                  </td>
                   {events.map((ev) => (
                     <td key={ev.id} className="event-col">
                       {s.perEvent.get(ev.id) ?? 0}

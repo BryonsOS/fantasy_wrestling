@@ -115,7 +115,7 @@ export default function AuthPage() {
                 <input
                   value={realName}
                   onChange={(e) => setRealName(e.target.value)}
-                  placeholder="So the commissioner knows who you are"
+                  placeholder="Shows on the standings next to your team name"
                   maxLength={60}
                   required
                 />

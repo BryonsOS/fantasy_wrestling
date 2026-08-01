@@ -33,7 +33,7 @@ function RealNamePrompt() {
   if (!show) return null
   return (
     <form className="name-prompt" onSubmit={save}>
-      <span>👋 What’s your first name? (Only the commissioner sees it — so he knows who’s behind the nickname.)</span>
+      <span>👋 What’s your first name? It shows next to your team name on the standings so the league knows who’s who.</span>
       <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="First name" maxLength={60} />
       <button className="btn btn-secondary btn-sm" type="submit" disabled={!value.trim()}>
         Save

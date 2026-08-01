@@ -15,6 +15,7 @@ interface RosterRow {
   display_name: string
   email: string
   is_admin: boolean
+  has_paid: boolean
   joined_at: string
   last_sign_in_at: string | null
   picks_on_latest: number
@@ -67,6 +68,16 @@ export default function AdminPage() {
     setBusy(false)
   }
 
+  async function togglePaid(row: RosterRow) {
+    const next = !row.has_paid
+    setRoster((cur) => cur.map((r) => (r.user_id === row.user_id ? { ...r, has_paid: next } : r)))
+    const { error } = await supabase.rpc('set_member_paid', { p_user_id: row.user_id, p_paid: next })
+    if (error) {
+      setError(error.message)
+      setRoster((cur) => cur.map((r) => (r.user_id === row.user_id ? { ...r, has_paid: row.has_paid } : r)))
+    }
+  }
+
   async function saveInviteCode(e: FormEvent) {
     e.preventDefault()
     if (!settings) return
@@ -106,6 +117,7 @@ export default function AdminPage() {
                     <th>Email</th>
                     <th>Joined</th>
                     <th>Picks</th>
+                    <th>Paid $60</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -125,6 +137,18 @@ export default function AdminPage() {
                           {r.latest_event_questions > 0
                             ? `${r.picks_on_latest}/${r.latest_event_questions}${done ? ' ✔' : ''}`
                             : '—'}
+                        </td>
+                        <td>
+                          <label className="paid-toggle">
+                            <input
+                              type="checkbox"
+                              checked={r.has_paid}
+                              onChange={() => togglePaid(r)}
+                            />
+                            <span className={r.has_paid ? 'roster-done' : 'roster-none'}>
+                              {r.has_paid ? 'Paid' : 'Owes'}
+                            </span>
+                          </label>
                         </td>
                       </tr>
                     )

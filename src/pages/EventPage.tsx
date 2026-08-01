@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { entryWinners, formatEntry, isScored, parseDuration, scoreForUser } from '../lib/score'
+import { entryWinners, formatDuration, formatEntry, isScored, parseDuration, scoreForUser } from '../lib/score'
 import {
   STATUS_LABELS,
   type LeagueEvent,
@@ -339,6 +339,10 @@ function EntryQuestion({
 
   const haveAnswer = isText ? myText != null : myValue != null
 
+  // live "we read this as..." preview for duration input
+  const durationPreview =
+    isDuration && text.trim() !== '' ? parseDuration(text) : null
+
   function submit() {
     if (isText) {
       const v = text.trim()
@@ -377,12 +381,22 @@ function EntryQuestion({
           </button>
         </div>
       )}
+      {isOpen && durationPreview != null && (
+        <div className="entry-preview">
+          Reads as <strong>{formatDuration(durationPreview)}</strong>
+          {durationPreview >= 3600 &&
+            ` (${Math.floor(durationPreview / 3600)}h ${Math.floor((durationPreview % 3600) / 60)}m ${durationPreview % 60}s)`}
+        </div>
+      )}
+      {isOpen && isDuration && text.trim() !== '' && durationPreview == null && (
+        <div className="entry-preview bad">Can’t read that — try 5:26:54</div>
+      )}
       {parseError && (
         <div className="alert alert-error">
           {isText
             ? 'Type an answer first.'
             : isDuration
-              ? 'Enter a time like 6:45:30 (hours:minutes:seconds).'
+              ? 'Enter a time like 5:26:54 (hours:minutes:seconds).'
               : 'Enter a valid number.'}
         </div>
       )}

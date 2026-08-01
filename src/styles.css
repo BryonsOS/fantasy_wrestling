@@ -259,6 +259,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .entry-block { margin-top: 12px; }
 .entry-form { display: flex; gap: 8px; max-width: 340px; }
 .entry-form input { flex: 1; }
+.entry-preview { margin-top: 6px; font-size: 13px; color: var(--gold); }
+.entry-preview.bad { color: var(--red-hot); }
 .entry-mine { margin-top: 8px; font-size: 14px; color: var(--text-dim); }
 .entry-mine strong { color: var(--text); }
 .entry-winner strong { color: var(--gold); }

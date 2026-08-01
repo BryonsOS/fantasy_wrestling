@@ -46,14 +46,35 @@ export function pointsAvailable(questions: Question[]): number {
   return questions.filter(isScored).reduce((s, q) => s + q.points, 0)
 }
 
-/** Parse "H:MM:SS", "MM:SS", or "SS" into total seconds. Null if invalid. */
+/**
+ * Parse a duration into total seconds. Null if invalid.
+ * With colons: "H:MM:SS" or "MM:SS".
+ * Without colons, digits are read clock-style from the right:
+ * "52654" -> 5:26:54, "2654" -> 26:54, "130" -> 1:30, "45" -> 0:45.
+ */
 export function parseDuration(input: string): number | null {
-  const parts = input.trim().split(':')
-  if (parts.length === 0 || parts.length > 3) return null
-  if (parts.some((p) => !/^\d+$/.test(p.trim()))) return null
-  let secs = 0
-  for (const p of parts) secs = secs * 60 + parseInt(p.trim(), 10)
-  return secs
+  const s = input.trim()
+  if (!s) return null
+
+  if (s.includes(':')) {
+    const parts = s.split(':').map((p) => p.trim())
+    if (parts.length > 3 || parts.some((p) => p === '' || !/^\d+$/.test(p))) return null
+    // minutes/seconds segments must be 0-59
+    for (let i = 1; i < parts.length; i++) {
+      if (parseInt(parts[i], 10) >= 60) return null
+    }
+    let secs = 0
+    for (const p of parts) secs = secs * 60 + parseInt(p, 10)
+    return secs
+  }
+
+  if (!/^\d+$/.test(s)) return null
+  if (s.length <= 2) return parseInt(s, 10) // just seconds
+  const sec = parseInt(s.slice(-2), 10)
+  const min = parseInt(s.slice(-4, -2), 10)
+  const hr = s.length > 4 ? parseInt(s.slice(0, -4), 10) : 0
+  if (sec >= 60 || min >= 60) return null
+  return hr * 3600 + min * 60 + sec
 }
 
 /** Format seconds as "H:MM:SS" (or "M:SS" under an hour). */

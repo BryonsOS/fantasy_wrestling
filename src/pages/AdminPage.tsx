@@ -13,6 +13,7 @@ interface LeagueSettings {
 interface RosterRow {
   user_id: string
   display_name: string
+  real_name: string | null
   email: string
   is_admin: boolean
   has_paid: boolean
@@ -68,6 +69,16 @@ export default function AdminPage() {
     setBusy(false)
   }
 
+  async function saveRealName(row: RosterRow, raw: string) {
+    const name = raw.trim() || null
+    if (name === (row.real_name ?? null)) return
+    const { error } = await supabase
+      .from('member_details')
+      .upsert({ user_id: row.user_id, real_name: name })
+    if (error) setError(error.message)
+    else setRoster((cur) => cur.map((r) => (r.user_id === row.user_id ? { ...r, real_name: name } : r)))
+  }
+
   async function togglePaid(row: RosterRow) {
     const next = !row.has_paid
     setRoster((cur) => cur.map((r) => (r.user_id === row.user_id ? { ...r, has_paid: next } : r)))
@@ -114,6 +125,7 @@ export default function AdminPage() {
                 <thead>
                   <tr>
                     <th>Member</th>
+                    <th>Name</th>
                     <th>Email</th>
                     <th>Joined</th>
                     <th>Picks</th>
@@ -128,6 +140,15 @@ export default function AdminPage() {
                         <td>
                           {r.display_name}
                           {r.is_admin && <span className="chip chip-prop roster-chip">Commish</span>}
+                        </td>
+                        <td>
+                          <input
+                            className="roster-name-input"
+                            defaultValue={r.real_name ?? ''}
+                            placeholder="—"
+                            maxLength={60}
+                            onBlur={(e) => saveRealName(r, e.target.value)}
+                          />
                         </td>
                         <td className="roster-email">{r.email}</td>
                         <td className="muted">

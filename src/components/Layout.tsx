@@ -1,6 +1,46 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+
+function RealNamePrompt() {
+  const { session } = useAuth()
+  const userId = session!.user.id
+  const [show, setShow] = useState(false)
+  const [value, setValue] = useState('')
+
+  useEffect(() => {
+    supabase
+      .from('member_details')
+      .select('real_name')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data || !data.real_name) setShow(true)
+      })
+  }, [userId])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    const name = value.trim()
+    if (!name) return
+    const { error } = await supabase
+      .from('member_details')
+      .upsert({ user_id: userId, real_name: name })
+    if (!error) setShow(false)
+  }
+
+  if (!show) return null
+  return (
+    <form className="name-prompt" onSubmit={save}>
+      <span>👋 What’s your first name? (Only the commissioner sees it — so he knows who’s behind the nickname.)</span>
+      <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="First name" maxLength={60} />
+      <button className="btn btn-secondary btn-sm" type="submit" disabled={!value.trim()}>
+        Save
+      </button>
+    </form>
+  )
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { profile, signOut } = useAuth()
@@ -31,7 +71,10 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="main">{children}</main>
+      <main className="main">
+        <RealNamePrompt />
+        {children}
+      </main>
       <footer className="footer">Predict the card. Talk the trash. Take the belt.</footer>
     </div>
   )

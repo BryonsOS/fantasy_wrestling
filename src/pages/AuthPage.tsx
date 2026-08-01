@@ -8,6 +8,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [realName, setRealName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -42,7 +43,11 @@ export default function AuthPage() {
           email,
           password,
           options: {
-            data: { display_name: displayName.trim(), invite_code: inviteCode.trim() },
+            data: {
+              display_name: displayName.trim(),
+              invite_code: inviteCode.trim(),
+              real_name: realName.trim(),
+            },
           },
         })
         if (error) {
@@ -102,6 +107,16 @@ export default function AuthPage() {
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="e.g. Macho Man Randy"
                   maxLength={30}
+                  required
+                />
+              </label>
+              <label>
+                First name
+                <input
+                  value={realName}
+                  onChange={(e) => setRealName(e.target.value)}
+                  placeholder="So the commissioner knows who you are"
+                  maxLength={60}
                   required
                 />
               </label>

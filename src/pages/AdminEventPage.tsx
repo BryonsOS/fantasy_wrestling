@@ -28,6 +28,10 @@ export default function AdminEventPage() {
   const [picks, setPicks] = useState<Pick[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  // browser confirm() dialogs get silently blocked by some mobile browsers,
+  // so destructive actions arm on first tap and fire on the second
+  const [armed, setArmed] = useState<string | null>(null)
 
   // new question form
   const [kind, setKind] = useState<QuestionKind>('match')
@@ -78,12 +82,18 @@ export default function AdminEventPage() {
 
   async function setStatus(status: EventStatus) {
     if (!event) return
-    if (status === 'final') {
+    if (status === 'final' && armed !== 'final') {
       const unscored = questions.filter((q) => !isScored(q))
-      if (unscored.length > 0 && !confirm(`${unscored.length} pick(s) have no result entered — they'll score 0 for everyone. Go final anyway?`)) {
+      if (unscored.length > 0) {
+        setArmed('final')
+        setNotice(
+          `${unscored.length} pick(s) have no result entered — they'll score 0 for everyone. Tap Final again to confirm.`,
+        )
         return
       }
     }
+    setArmed(null)
+    setNotice(null)
     const { error } = await supabase.from('events').update({ status }).eq('id', event.id)
     if (error) setError(error.message)
     else setEvent({ ...event, status })
@@ -97,7 +107,13 @@ export default function AdminEventPage() {
 
   async function deleteEvent() {
     if (!event) return
-    if (!confirm(`Delete "${event.name}" and all its picks? This can't be undone.`)) return
+    if (armed !== 'delete-event') {
+      setArmed('delete-event')
+      setNotice(`This deletes "${event.name}" and every pick on it, permanently. Tap the button again to confirm.`)
+      return
+    }
+    setArmed(null)
+    setNotice(null)
     const { error } = await supabase.from('events').delete().eq('id', event.id)
     if (error) setError(error.message)
     else navigate('/admin')
@@ -196,7 +212,11 @@ export default function AdminEventPage() {
   }
 
   async function deleteQuestion(qid: string) {
-    if (!confirm('Delete this pick and any member picks on it?')) return
+    if (armed !== 'delete-q-' + qid) {
+      setArmed('delete-q-' + qid)
+      return
+    }
+    setArmed(null)
     const { error } = await supabase.from('questions').delete().eq('id', qid)
     if (error) setError(error.message)
     else await load()
@@ -234,6 +254,7 @@ export default function AdminEventPage() {
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+      {notice && <div className="alert alert-error">{notice}</div>}
 
       <section className="card admin-section">
         <h2 className="section-title">Event Status</h2>
@@ -316,7 +337,7 @@ export default function AdminEventPage() {
                   pts
                 </label>
                 <button className="btn btn-ghost btn-sm danger" onClick={() => deleteQuestion(q.id)}>
-                  Delete
+                  {armed === 'delete-q-' + q.id ? 'Tap again to delete' : 'Delete'}
                 </button>
               </div>
               {q.detail && <div className="muted">{q.detail}</div>}
@@ -470,7 +491,7 @@ export default function AdminEventPage() {
       <section className="card admin-section danger-zone">
         <h2 className="section-title">Danger Zone</h2>
         <button className="btn btn-danger" onClick={deleteEvent}>
-          Delete this event
+          {armed === 'delete-event' ? 'Tap again — this is permanent' : 'Delete this event'}
         </button>
       </section>
     </div>

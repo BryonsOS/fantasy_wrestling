@@ -215,7 +215,7 @@ export default function AdminEventPage() {
   }
 
   async function updatePoints(qid: string, pts: number) {
-    if (!Number.isFinite(pts) || pts < 1) return
+    if (!Number.isFinite(pts) || pts < 0) return
     const { error } = await supabase.from('questions').update({ points: pts }).eq('id', qid)
     if (error) setError(error.message)
     else setQuestions((qs) => qs.map((q) => (q.id === qid ? { ...q, points: pts } : q)))
@@ -309,7 +309,7 @@ export default function AdminEventPage() {
                 <label className="points-input">
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     defaultValue={q.points}
                     onBlur={(e) => updatePoints(q.id, parseInt(e.target.value, 10))}
                   />{' '}
@@ -453,12 +453,12 @@ export default function AdminEventPage() {
             </p>
           )}
           <label>
-            Points for a correct pick
+            Points for a correct pick (0 = tiebreaker only)
             <input
               type="number"
-              min={1}
+              min={0}
               value={points}
-              onChange={(e) => setPoints(parseInt(e.target.value, 10) || 1)}
+              onChange={(e) => setPoints(Number.isFinite(parseInt(e.target.value, 10)) ? parseInt(e.target.value, 10) : 1)}
             />
           </label>
           <button className="btn btn-primary" type="submit" disabled={busy}>

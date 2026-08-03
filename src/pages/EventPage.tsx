@@ -218,7 +218,9 @@ export default function EventPage() {
                       ? 'Closest Without Going Over'
                       : 'Prop Bet'}
                 </span>
-                <span className="question-points">{q.points} {q.points === 1 ? 'pt' : 'pts'}</span>
+                <span className="question-points">
+                  {q.points === 0 ? 'Tiebreaker' : `${q.points} ${q.points === 1 ? 'pt' : 'pts'}`}
+                </span>
               </div>
               <h3 className="question-title">{q.title}</h3>
               {q.detail && <div className="question-detail">{q.detail}</div>}

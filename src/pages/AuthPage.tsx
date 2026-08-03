@@ -65,6 +65,18 @@ export default function AuthPage() {
 
   return (
     <div className="auth-wrap">
+      <div className="auth-banner">
+        <img
+          className="banner-wide"
+          src="https://i.postimg.cc/90m1Bq2Z/Chat-GPT-Image-Aug-3-2026-03-14-00-PM.png"
+          alt="Fantasy Pick'em League — SummerSlam, Money in the Bank, Survivor Series, Royal Rumble, WrestleMania"
+        />
+        <img
+          className="banner-mobile"
+          src="https://i.postimg.cc/ZnbjLym6/Chat-GPT-Image-Aug-3-2026-03-17-13-PM.png"
+          alt="Fantasy Pick'em League — SummerSlam, Money in the Bank, Survivor Series, Royal Rumble, WrestleMania"
+        />
+      </div>
       <div className="auth-card">
         <div className="auth-hero">
           <div className="auth-belt">🏆</div>

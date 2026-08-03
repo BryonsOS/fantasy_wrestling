@@ -6,8 +6,36 @@ import type { Profile } from '../lib/types'
 interface Message {
   id: string
   user_id: string
-  body: string
+  body: string | null
+  image_path: string | null
   created_at: string
+}
+
+const BUCKET = 'chat-images'
+
+function imageUrl(path: string): string {
+  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
+}
+
+/** Downscale to max 1600px JPEG so phone photos upload fast and stay small. */
+async function downscaleImage(file: File, maxDim = 1600): Promise<Blob> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
+    const w = Math.max(1, Math.round(bitmap.width * scale))
+    const h = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, w, h)
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/jpeg', 0.85),
+    )
+  } catch {
+    // fall back to the original file if the browser can't decode/re-encode it
+    if (file.size <= 5 * 1024 * 1024) return file
+    throw new Error('too big')
+  }
 }
 
 export default function ChatPage() {
@@ -16,10 +44,13 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [text, setText] = useState('')
+  const [pendingImage, setPendingImage] = useState<File | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const firstScroll = useRef(true)
 
   useEffect(() => {
@@ -68,30 +99,54 @@ export default function ChatPage() {
     if (messages.length > 0) firstScroll.current = false
   }, [messages.length])
 
+  function pickImage(file: File | null) {
+    if (preview) URL.revokeObjectURL(preview)
+    setPendingImage(file)
+    setPreview(file ? URL.createObjectURL(file) : null)
+  }
+
   async function send(e: FormEvent) {
     e.preventDefault()
     const body = text.trim()
-    if (!body || sending) return
+    if ((!body && !pendingImage) || sending) return
     setSending(true)
     setError(null)
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({ user_id: userId, body })
-      .select()
-      .single()
-    if (error) {
-      setError('Message didn’t send — try again.')
-    } else if (data) {
+    try {
+      let imagePath: string | null = null
+      if (pendingImage) {
+        const blob = await downscaleImage(pendingImage)
+        imagePath = `${userId}/${crypto.randomUUID()}.jpg`
+        const { error: upErr } = await supabase.storage
+          .from(BUCKET)
+          .upload(imagePath, blob, { contentType: 'image/jpeg' })
+        if (upErr) throw upErr
+      }
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({ user_id: userId, body: body || null, image_path: imagePath })
+        .select()
+        .single()
+      if (error) throw error
       const msg = data as Message
       setMessages((cur) => (cur.some((m) => m.id === msg.id) ? cur : [...cur, msg]))
       setText('')
+      pickImage(null)
+      if (fileRef.current) fileRef.current.value = ''
+    } catch {
+      setError('Message didn’t send — try again (images must be under ~5MB).')
     }
     setSending(false)
   }
 
-  async function remove(id: string) {
-    const { error } = await supabase.from('messages').delete().eq('id', id)
-    if (!error) setMessages((cur) => cur.filter((m) => m.id !== id))
+  async function remove(m: Message) {
+    const { error } = await supabase.from('messages').delete().eq('id', m.id)
+    if (!error) {
+      setMessages((cur) => cur.filter((x) => x.id !== m.id))
+      if (m.image_path) {
+        // best-effort cleanup of the stored file
+        supabase.storage.from(BUCKET).remove([m.image_path])
+      }
+    }
   }
 
   const nameOf = (uid: string) => profiles.find((p) => p.id === uid)?.display_name ?? 'Former member'
@@ -133,9 +188,16 @@ export default function ChatPage() {
                   </div>
                 )}
                 <div className="chat-bubble-row">
-                  <div className="chat-bubble">{m.body}</div>
+                  <div className="chat-bubble">
+                    {m.image_path && (
+                      <a href={imageUrl(m.image_path)} target="_blank" rel="noreferrer">
+                        <img className="chat-img" src={imageUrl(m.image_path)} loading="lazy" alt="" />
+                      </a>
+                    )}
+                    {m.body}
+                  </div>
                   {(mine || profile?.is_admin) && (
-                    <button className="chat-delete" title="Delete" onClick={() => remove(m.id)}>
+                    <button className="chat-delete" title="Delete" onClick={() => remove(m)}>
                       ✕
                     </button>
                   )}
@@ -148,15 +210,50 @@ export default function ChatPage() {
 
         {error && <div className="alert alert-error">{error}</div>}
 
+        {preview && (
+          <div className="chat-attach-preview">
+            <img src={preview} alt="attachment preview" />
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm danger"
+              onClick={() => {
+                pickImage(null)
+                if (fileRef.current) fileRef.current.value = ''
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        )}
+
         <form className="chat-input" onSubmit={send}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            className="btn btn-secondary chat-attach-btn"
+            title="Attach a photo"
+            onClick={() => fileRef.current?.click()}
+          >
+            📷
+          </button>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Say it to their face…"
             maxLength={1000}
           />
-          <button className="btn btn-primary" type="submit" disabled={sending || !text.trim()}>
-            Send
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={sending || (!text.trim() && !pendingImage)}
+          >
+            {sending ? '…' : 'Send'}
           </button>
         </form>
       </div>

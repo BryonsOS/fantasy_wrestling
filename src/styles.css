@@ -303,6 +303,13 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .chat-bubble-row:hover .chat-delete { opacity: 1; }
 .chat-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
 .chat-input input { flex: 1; }
+.chat-attach-btn { padding: 10px 12px; }
+.chat-img { display: block; max-width: min(320px, 100%); max-height: 320px; border-radius: 8px; margin-bottom: 4px; }
+.chat-attach-preview {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-top: 1px solid var(--border);
+}
+.chat-attach-preview img { height: 56px; border-radius: 6px; }
 
 /* ---------- champion banner ---------- */
 .champion-banner {

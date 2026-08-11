@@ -272,6 +272,23 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 }
 .score-list li.me { outline: 1px solid var(--gold); }
 .score-list .rank { font-family: var(--font-display); font-weight: 800; color: var(--gold); width: 24px; }
+.lock-countdown {
+  font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.1em; font-size: 14px; color: var(--gold);
+  margin: 6px 0 12px;
+}
+.event-card .lock-countdown { margin: 8px 0 0; font-size: 13px; }
+.forgot-link { align-self: center; }
+.password-form { max-width: 420px; }
+.error-screen {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; text-align: center; padding: 24px;
+}
+.error-screen h1 { font-size: 40px; margin: 0; }
+.error-screen p { color: var(--text-dim); margin: 0 0 8px; }
+.topbar-user .user-name { text-decoration: none; }
+.topbar-user .user-name:hover { color: var(--gold); }
+
 .rank-champ {
   color: var(--ink); background: var(--gold); border-radius: 3px;
   display: inline-block; min-width: 20px; text-align: center;

@@ -8,6 +8,7 @@ import LeaderboardPage from './pages/LeaderboardPage'
 import ChatPage from './pages/ChatPage'
 import AdminPage from './pages/AdminPage'
 import AdminEventPage from './pages/AdminEventPage'
+import PasswordPage from './pages/PasswordPage'
 
 export default function App() {
   const { session, profile, loading } = useAuth()
@@ -27,6 +28,8 @@ export default function App() {
         <Route path="/events/:id" element={<EventPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/account" element={<PasswordPage />} />
+        <Route path="/reset" element={<PasswordPage />} />
         {profile?.is_admin && (
           <>
             <Route path="/admin" element={<AdminPage />} />

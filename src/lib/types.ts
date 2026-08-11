@@ -13,6 +13,7 @@ export interface LeagueEvent {
   event_date: string | null
   status: EventStatus
   is_finale: boolean
+  locks_at: string | null
 }
 
 export type QuestionKind = 'match' | 'prop' | 'entry'

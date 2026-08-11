@@ -170,6 +170,31 @@ export default function AuthPage() {
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? 'Working…' : mode === 'signin' ? 'Sign In' : 'Join the League'}
           </button>
+
+          {mode === 'signin' && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm forgot-link"
+              disabled={busy}
+              onClick={async () => {
+                setError(null)
+                setNotice(null)
+                if (!email.trim()) {
+                  setError('Type your email above first, then tap Forgot password.')
+                  return
+                }
+                setBusy(true)
+                const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+                  redirectTo: window.location.origin + '/reset',
+                })
+                setBusy(false)
+                if (error) setError(error.message)
+                else setNotice('Reset link sent — check your email, then follow it to set a new password.')
+              }}
+            >
+              Forgot password?
+            </button>
+          )}
         </form>
       </div>
     </div>

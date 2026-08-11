@@ -298,6 +298,24 @@ export default function AdminEventPage() {
               onBlur={(e) => saveEventField({ event_date: e.target.value || null })}
             />
           </label>
+          <label>
+            Picks lock at (shows a countdown to members; locking is still your manual flip)
+            <input
+              type="datetime-local"
+              defaultValue={
+                event.locks_at
+                  ? new Date(new Date(event.locks_at).getTime() - new Date().getTimezoneOffset() * 60000)
+                      .toISOString()
+                      .slice(0, 16)
+                  : ''
+              }
+              onBlur={(e) =>
+                saveEventField({
+                  locks_at: e.target.value ? new Date(e.target.value).toISOString() : null,
+                })
+              }
+            />
+          </label>
           <label className="checkbox-row">
             <input
               type="checkbox"

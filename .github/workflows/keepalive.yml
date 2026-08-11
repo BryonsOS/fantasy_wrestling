@@ -1,0 +1,23 @@
+name: Keep Supabase awake
+
+# Free-tier Supabase pauses the database after ~7 days without traffic.
+# This pings the REST API twice a week so the league site never goes dark
+# between pay-per-views. The apikey below is the public client key that
+# already ships in the site bundle — not a secret.
+
+on:
+  schedule:
+    - cron: '13 9 * * 1,4' # Mondays & Thursdays 09:13 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping database through REST API
+        run: |
+          curl -fsS "https://cnchsowyukaioujfrups.supabase.co/rest/v1/league_settings?select=id&limit=1" \
+            -H "apikey: sb_publishable_mQPA6yhSEzwr1wflWoserQ_eaXFsdcU" \
+            -H "Authorization: Bearer sb_publishable_mQPA6yhSEzwr1wflWoserQ_eaXFsdcU" \
+            -o /dev/null
+          echo "Database pinged — pause timer reset."

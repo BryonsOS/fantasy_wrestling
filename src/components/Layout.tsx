@@ -67,7 +67,9 @@ export default function Layout({ children }: { children: ReactNode }) {
             {profile?.is_admin && <NavLink to="/admin">Admin</NavLink>}
           </nav>
           <div className="topbar-user">
-            <span className="user-name">{profile?.display_name}</span>
+            <NavLink to="/account" className="user-name" title="Account settings">
+              {profile?.display_name}
+            </NavLink>
             <button className="btn btn-ghost btn-sm" onClick={signOut}>
               Sign out
             </button>

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { LiveDot } from '../components/icons'
 import { entryWinners, formatDuration, formatEntry, isScored, parseDuration, scoreForUser } from '../lib/score'
+import { countdownText } from '../lib/time'
 import {
   STATUS_LABELS,
   type LeagueEvent,
@@ -53,6 +54,34 @@ export default function EventPage() {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  // Live updates: reload when results, picks, or event status change.
+  useEffect(() => {
+    if (!id) return
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const reload = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => load(), 400)
+    }
+    const channel = supabase
+      .channel(`event-live-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `id=eq.${id}` }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'questions', filter: `event_id=eq.${id}` }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'picks' }, reload)
+      .subscribe()
+    return () => {
+      if (timer) clearTimeout(timer)
+      supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  // ticks once a minute so the lock countdown stays current
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [])
 
   const myRows = useMemo(
     () => new Map(picks.filter((p) => p.user_id === userId).map((p) => [p.question_id, p])),
@@ -206,6 +235,10 @@ export default function EventPage() {
             {pickedCount}/{questions.length} picks made — picks save automatically
           </span>
         </div>
+      )}
+
+      {isOpen && event.locks_at && (
+        <div className="lock-countdown">{countdownText(event.locks_at, now)}</div>
       )}
 
       {error && <div className="alert alert-error">{error}</div>}

@@ -69,10 +69,10 @@ export default function AuthPage() {
         <picture>
           <source
             media="(max-width: 640px)"
-            srcSet="https://i.postimg.cc/ZnbjLym6/Chat-GPT-Image-Aug-3-2026-03-17-13-PM.png"
+            srcSet="https://i.postimg.cc/90m1Bq2Z/Chat-GPT-Image-Aug-3-2026-03-14-00-PM.png"
           />
           <img
-            src="https://i.postimg.cc/90m1Bq2Z/Chat-GPT-Image-Aug-3-2026-03-14-00-PM.png"
+            src="https://i.postimg.cc/ZnbjLym6/Chat-GPT-Image-Aug-3-2026-03-17-13-PM.png"
             alt="Fantasy Pick'em League — SummerSlam, Money in the Bank, Survivor Series, Royal Rumble, WrestleMania"
           />
         </picture>

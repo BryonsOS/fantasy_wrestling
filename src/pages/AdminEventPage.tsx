@@ -309,7 +309,7 @@ export default function AdminEventPage() {
             />
             <span>
               Season finale — when this event goes <strong>Final</strong>, the standings leader is
-              crowned Ultimate Champion 🏆
+              crowned Cash &amp; Carry Champion
             </span>
           </label>
         </div>
@@ -357,7 +357,7 @@ export default function AdminEventPage() {
                       placeholder={q.entry_format === 'duration' ? 'e.g. 6:45:30' : q.entry_format === 'text' ? 'e.g. Becky Lynch' : 'e.g. 42'}
                       onBlur={(e) => saveEntryAnswer(q.id, e.target.value, q.entry_format)}
                     />
-                    {isScored(q) && <span className="muted">✔ saved — clear the box to unset</span>}
+                    {isScored(q) && <span className="muted">saved — clear the box to unset</span>}
                   </div>
                   {q.entry_format === 'text' && (
                     <div className="admin-text-answers">

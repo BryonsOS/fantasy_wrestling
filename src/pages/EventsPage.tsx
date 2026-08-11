@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { LiveDot } from '../components/icons'
 import { STATUS_LABELS, type LeagueEvent } from '../lib/types'
 
 export default function EventsPage() {
@@ -79,7 +80,7 @@ function EventCard({ event }: { event: LeagueEvent }) {
       <div className="event-date">{date}</div>
       <div className="event-cta">
         {event.status === 'open' && 'Make your picks →'}
-        {event.status === 'locked' && '🔴 Live — scores & everyone’s picks →'}
+        {event.status === 'locked' && (<><LiveDot />Live — scores & everyone’s picks →</>)}
         {event.status === 'final' && 'See results →'}
       </div>
     </Link>

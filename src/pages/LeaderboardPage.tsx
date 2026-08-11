@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { BeltIcon } from '../components/icons'
 import { scoreForUser } from '../lib/score'
 import type { LeagueEvent, Pick, Profile, Question } from '../lib/types'
 
@@ -94,13 +95,14 @@ export default function LeaderboardPage() {
 
   return (
     <div className="page">
-      <h1 className="page-title">League Standings</h1>
+      <div className="page-kicker">League Standings</div>
+      <h1 className="page-title">Cash &amp; Carry Championship</h1>
 
       {champion && (
         <div className="champion-banner">
-          <div className="champion-belt">🏆</div>
+          <div className="champion-belt"><BeltIcon height={40} /></div>
           <div>
-            <div className="champion-label">Ultimate Champion</div>
+            <div className="champion-label">Cash &amp; Carry Champion</div>
             <div className="champion-name">{champion.profile.display_name}</div>
             <div className="champion-pts">{champion.total} points across {events.length} events</div>
           </div>
@@ -135,7 +137,7 @@ export default function LeaderboardPage() {
               {standings.map((s, i) => (
                 <tr key={s.profile.id} className={s.profile.id === userId ? 'me' : ''}>
                   <td className="rank-col">
-                    {i === 0 && s.total > 0 ? '🏆' : i + 1}
+                    <span className={i === 0 && s.total > 0 ? 'rank-champ' : ''}>{i + 1}</span>
                   </td>
                   <td className="name-col">
                     <div className="team-name">{s.profile.display_name}</div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { LiveDot } from '../components/icons'
 import { entryWinners, formatDuration, formatEntry, isScored, parseDuration, scoreForUser } from '../lib/score'
 import {
   STATUS_LABELS,
@@ -142,6 +143,34 @@ export default function EventPage() {
 
   const nameOf = (uid: string) => profiles.find((p) => p.id === uid)?.display_name ?? '—'
 
+  const matchQuestions = questions.filter((q) => q.kind === 'match')
+  function kickerFor(q: Question): string {
+    if (q.kind === 'prop') return 'Prop Bet'
+    if (q.kind === 'entry') {
+      if (q.points === 0) return 'Tiebreaker'
+      return q.entry_format === 'text' ? 'Fill-In' : 'Closest Without Going Over'
+    }
+    const n = matchQuestions.indexOf(q)
+    if (n === 0) return 'Main Event'
+    if (/championship/i.test(q.title)) return 'Championship Match'
+    return `Match ${n + 1}`
+  }
+
+  function DetailLine({ detail }: { detail: string }) {
+    const parts = detail.split(/ vs\.? /i)
+    if (parts.length < 2) return <div className="question-detail">{detail}</div>
+    return (
+      <div className="question-detail">
+        {parts.map((part, i) => (
+          <span key={i}>
+            {i > 0 && <span className="vs">VS</span>}
+            {part}
+          </span>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="page">
       <Link to="/" className="back-link">
@@ -184,7 +213,7 @@ export default function EventPage() {
       {eventScores.length > 0 && (
         <section className="card score-summary">
           <h2 className="section-title">
-            {isFinal ? 'Event Results' : '🔴 Live Scoreboard'}
+            {isFinal ? 'Event Results' : (<><LiveDot />Live Scoreboard</>)}
           </h2>
           {!isFinal && (
             <p className="muted">
@@ -195,7 +224,7 @@ export default function EventPage() {
           <ol className="score-list">
             {eventScores.map((s, i) => (
               <li key={s.profile.id} className={s.profile.id === userId ? 'me' : ''}>
-                <span className="rank">{isFinal && i === 0 ? '🏆' : i + 1}</span>
+                <span className={isFinal && i === 0 ? 'rank rank-champ' : 'rank'}>{i + 1}</span>
                 <span className="name">{s.profile.display_name}</span>
                 <span className="pts">{s.score} pts</span>
               </li>
@@ -208,22 +237,17 @@ export default function EventPage() {
         {questions.map((q, idx) => {
           const myRow = myRows.get(q.id)
           const mine = myRow?.option_id ?? null
+          const isMainEvent = q.kind === 'match' && matchQuestions.indexOf(q) === 0
           return (
-            <div key={q.id} className={`card question-card ${q.kind}`}>
+            <div key={q.id} className={`card question-card ${q.kind}${isMainEvent ? ' main-event' : ''}`}>
               <div className="question-head">
-                <span className="question-kind">
-                  {q.kind === 'match'
-                    ? `Match ${questions.filter((x) => x.kind === 'match').indexOf(q) + 1}`
-                    : q.kind === 'entry'
-                      ? 'Closest Without Going Over'
-                      : 'Prop Bet'}
-                </span>
+                <span className="question-kind">{kickerFor(q)}</span>
                 <span className="question-points">
                   {q.points === 0 ? 'Tiebreaker' : `${q.points} ${q.points === 1 ? 'pt' : 'pts'}`}
                 </span>
               </div>
               <h3 className="question-title">{q.title}</h3>
-              {q.detail && <div className="question-detail">{q.detail}</div>}
+              {q.detail && <DetailLine detail={q.detail} />}
 
               {q.kind === 'entry' ? (
                 <EntryQuestion
@@ -266,7 +290,7 @@ export default function EventPage() {
 
                   {revealAll && mine && q.correct_option_id && (
                     <div className={mine === q.correct_option_id ? 'result-line hit' : 'result-line miss'}>
-                      {mine === q.correct_option_id ? `✔ Nailed it (+${q.points})` : '✘ Missed'}
+                      {mine === q.correct_option_id ? `HIT +${q.points}` : 'MISS'}
                     </div>
                   )}
 
@@ -405,7 +429,7 @@ function EntryQuestion({
       {haveAnswer && (
         <div className="entry-mine">
           Your answer: <strong>{isText ? myText : formatEntry(q, myValue!)}</strong>
-          {revealAll && isText && myRow?.is_correct === true && ' ✔'}
+          {revealAll && isText && myRow?.is_correct === true && <span className="tag-win">CORRECT</span>}
         </div>
       )}
 
@@ -428,7 +452,7 @@ function EntryQuestion({
               <li key={p.id} className={winners.includes(p.user_id) ? 'entry-winner' : ''}>
                 <strong>{nameOf(p.user_id)}:</strong>{' '}
                 {isText ? p.entry_text : formatEntry(q, Number(p.entry_value))}
-                {winners.includes(p.user_id) && ' 🏆'}
+                {winners.includes(p.user_id) && <span className="tag-win">WINNER</span>}
                 {p.user_id === userId && ' (you)'}
               </li>
             ))}

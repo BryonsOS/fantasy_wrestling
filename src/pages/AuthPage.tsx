@@ -79,11 +79,10 @@ export default function AuthPage() {
       </div>
       <div className="auth-card">
         <div className="auth-hero">
-          <div className="auth-belt">🏆</div>
           <h1>
-            Fantasy <em>Wrestling</em>
+            Fantasy <em>Pick’em</em> League
           </h1>
-          <p>Call every finish. Claim the belt.</p>
+          <p>Win the Cash &amp; Carry Championship. Pick. Compete. Win.</p>
         </div>
 
         <div className="auth-tabs">

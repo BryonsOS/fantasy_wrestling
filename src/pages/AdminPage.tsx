@@ -156,7 +156,7 @@ export default function AdminPage() {
                         </td>
                         <td className={done ? 'roster-done' : r.picks_on_latest === 0 ? 'roster-none' : ''}>
                           {r.latest_event_questions > 0
-                            ? `${r.picks_on_latest}/${r.latest_event_questions}${done ? ' ✔' : ''}`
+                            ? `${r.picks_on_latest}/${r.latest_event_questions}${done ? ' \u2713' : ''}`
                             : '—'}
                         </td>
                         <td>
@@ -191,7 +191,7 @@ export default function AdminPage() {
               onChange={(e) => setSettings({ ...settings, invite_code: e.target.value })}
             />
             <button className="btn btn-secondary" type="submit">
-              {codeSaved ? 'Saved ✔' : 'Save Code'}
+              {codeSaved ? 'Saved' : 'Save Code'}
             </button>
           </form>
         )}

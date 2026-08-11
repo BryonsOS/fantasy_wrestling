@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { CameraIcon } from '../components/icons'
 import type { Profile } from '../lib/types'
 
 interface Message {
@@ -240,7 +241,7 @@ export default function ChatPage() {
             title="Attach a photo"
             onClick={() => fileRef.current?.click()}
           >
-            📷
+            <CameraIcon />
           </button>
           <input
             value={text}

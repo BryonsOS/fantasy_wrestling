@@ -38,7 +38,7 @@ export default function EventPage() {
         .order('created_at')
         .order('sort_order', { referencedTable: 'options' }),
       supabase.from('picks').select('*, questions!inner(event_id)').eq('questions.event_id', id),
-      supabase.from('profiles').select('*'),
+      supabase.from('profiles').select('*').eq('in_pickem', true),
     ])
     setEvent(evRes.data as LeagueEvent | null)
     setQuestions((qRes.data as Question[]) ?? [])

@@ -33,7 +33,11 @@ export default function LeaderboardPage() {
         .eq('status', 'final')
         .order('event_date', { ascending: true, nullsFirst: true })
       const finals = (evData as LeagueEvent[]) ?? []
-      const { data: profData } = await supabase.from('profiles').select('*').order('display_name')
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('in_pickem', true)
+        .order('display_name')
       const profiles = (profData as Profile[]) ?? []
       const { data: nameData } = await supabase.from('member_details').select('user_id, real_name')
       setNames(
